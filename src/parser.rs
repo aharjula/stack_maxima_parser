@@ -125,10 +125,12 @@ impl MPPosition {
 /// Type of string based on its context.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StackStringUsage {
-	CASText, // For the string arguments of the `castext` and `castext_concat` functions.
+	CASText, // For the string argument of the `castext` function.
+	CASTextConcat, // For a string argument of `castext_concat` function.
 	Include, // For `stack_include`.
 	IncludeContrib, // For `stack_include_contrib`.
 	Unknown, // Other uses of strings.
+	ListElement(usize), // Direct items of lists.
 }
 
 
@@ -399,37 +401,56 @@ impl MPNode {
 	/// and needs the initial context as an argument. Just give 
 	/// `StackStringUsage::Unknown` as the argument.
 	pub fn extract_stack_string_usage(&self, tag: StackStringUsage) -> Vec<(StackStringUsage, MPNode)> {
+		// Reset the tag to unknown for deeper structs.
+		let tc = StackStringUsage::Unknown;
 		match &self.value {
 			MPNodeType::String(_) => {
 				vec![(tag.clone(), self.clone())]
 			}
 			MPNodeType::PostfixOperation(n, _) | MPNodeType::PrefixOperation(_, n) | MPNodeType::LoopBit(_, n) => {
-				n.extract_stack_string_usage(tag)
+				n.extract_stack_string_usage(tc)
 			},
 			MPNodeType::Operation(n1, _, n2, _) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
-				for i in n1.extract_stack_string_usage(tag.clone()) {
+				for i in n1.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
-				for i in n2.extract_stack_string_usage(tag.clone()) {
+				for i in n2.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
 				result
 			},
-			MPNodeType::Group(ns) | MPNodeType::Set(ns) | MPNodeType::List(ns) | MPNodeType::Root(ns,_,_) => {
+			MPNodeType::Group(ns) | MPNodeType::Set(ns) | MPNodeType::Root(ns,_,_) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
 				for n in ns {
-					for i in n.extract_stack_string_usage(tag.clone()) {
+					for i in n.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
 				result
-			} 
+			},
+			MPNodeType::List(ns) => {
+				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
+				for (ind,n) in ns.iter().enumerate() {
+					for i in n.extract_stack_string_usage(StackStringUsage::ListElement(ind)) {
+						result.push(i.clone());
+					}
+				}
+				result
+			},
 			MPNodeType::FunctionCall(name, a) => {
-				if name.to_code() == "castext" || name.to_code() == "castext_concat" {
+				if name.to_code() == "castext" {
 					let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
 					for n in a {
 						for i in n.extract_stack_string_usage(StackStringUsage::CASText) {
+							result.push(i.clone());
+						}
+					}
+					result
+				} else if name.to_code() == "castext_concat" {
+					let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
+					for n in a {
+						for i in n.extract_stack_string_usage(StackStringUsage::CASTextConcat) {
 							result.push(i.clone());
 						}
 					}
@@ -452,11 +473,11 @@ impl MPNode {
 					result
 				} else {
 					let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
-					for i in name.extract_stack_string_usage(tag.clone()) {
+					for i in name.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 					for n in a {
-						for i in n.extract_stack_string_usage(tag.clone()) {
+						for i in n.extract_stack_string_usage(tc.clone()) {
 							result.push(i.clone());
 						}
 					}
@@ -465,11 +486,11 @@ impl MPNode {
 			} 
 			MPNodeType::Indexing(l, ns) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
-				for i in l.extract_stack_string_usage(tag.clone()) {
+				for i in l.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
 				for n in ns {
-					for i in n.extract_stack_string_usage(tag.clone()) {
+					for i in n.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
@@ -478,16 +499,16 @@ impl MPNode {
 			MPNodeType::If(conds, branches) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
 				for i in 0..conds.len() {
-					for i in conds[i].extract_stack_string_usage(tag.clone()) {
+					for i in conds[i].extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
-					for i in branches[i].extract_stack_string_usage(tag.clone()) {
+					for i in branches[i].extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
 				// Then the else branch.
 				if branches.len() > conds.len() {
-					for i in branches.last().unwrap().extract_stack_string_usage(tag.clone()) {
+					for i in branches.last().unwrap().extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
@@ -496,22 +517,22 @@ impl MPNode {
 			MPNodeType::Loop(body, ns) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
 				for n in ns {
-					for i in n.extract_stack_string_usage(tag.clone()) {
+					for i in n.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
-				for i in body.extract_stack_string_usage(tag.clone()) {
+				for i in body.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
 				result
 			}
 			MPNodeType::Statement(n1, ns) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
-				for i in n1.extract_stack_string_usage(tag.clone()) {
+				for i in n1.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
 				for n in ns {
-					for i in n.extract_stack_string_usage(tag.clone()) {
+					for i in n.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}
@@ -519,11 +540,11 @@ impl MPNode {
 			}
 			MPNodeType::EvaluationFlag(n1, optn) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
-				for i in n1.extract_stack_string_usage(tag.clone()) {
+				for i in n1.extract_stack_string_usage(tc.clone()) {
 					result.push(i.clone());
 				}
 				if let Some(n2) = optn {
-					for i in n2.extract_stack_string_usage(tag.clone()) {
+					for i in n2.extract_stack_string_usage(tc.clone()) {
 						result.push(i.clone());
 					}
 				}

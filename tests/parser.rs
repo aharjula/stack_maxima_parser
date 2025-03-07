@@ -542,10 +542,10 @@ g(x):=block(x^4 /* A bit boring function. */);
 
 #[test]
 fn utility_extract_interesting_strings() {
-	let test = String::from("feedback(x) := castext(\"Something about {@x@}.\");
+	let test = String::from("feedback(x) := castext_concat(castext(\"Something about {@x@}.\"),\" concat of strings is possible\");
 stack_include(\"https://somewhere.out.there/lib.mac\");
 stack_include_contrib(\"validators.mac\");
-other: [\"random string ⠴⺗ⶮ⎟⍞⟝\"];
+other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\")];
 ");
 
 	let mut parser = StackMaximaParser::new_no_insertions();
@@ -555,13 +555,15 @@ other: [\"random string ⠴⺗ⶮ⎟⍞⟝\"];
 	// This function is a bit odd as it requires definition of the first guess on type.
 	let strings = result.extract_stack_string_usage(StackStringUsage::Unknown);
 
-	assert_eq!(strings.len(), 4);
+	assert_eq!(strings.len(), 6);
 
 	// Check the minimal context information.
 	assert_eq!(strings[0].0, StackStringUsage::CASText);
-	assert_eq!(strings[1].0, StackStringUsage::Include);
-	assert_eq!(strings[2].0, StackStringUsage::IncludeContrib);
-	assert_eq!(strings[3].0, StackStringUsage::Unknown);
+	assert_eq!(strings[1].0, StackStringUsage::CASTextConcat);
+	assert_eq!(strings[2].0, StackStringUsage::Include);
+	assert_eq!(strings[3].0, StackStringUsage::IncludeContrib);
+	assert_eq!(strings[4].0, StackStringUsage::ListElement(2));
+	assert_eq!(strings[5].0, StackStringUsage::Unknown);
 
 	// Then the values. The nodes do also have positions...
 	if let MPNodeType::String(content) = &strings[0].1.value {
@@ -570,17 +572,27 @@ other: [\"random string ⠴⺗ⶮ⎟⍞⟝\"];
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[1].1.value {
-		assert_eq!(content, "https://somewhere.out.there/lib.mac");
+		assert_eq!(content, " concat of strings is possible");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[2].1.value {
-		assert_eq!(content, "validators.mac");
+		assert_eq!(content, "https://somewhere.out.there/lib.mac");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[3].1.value {
+		assert_eq!(content, "validators.mac");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[4].1.value {
 		assert_eq!(content, "random string ⠴⺗ⶮ⎟⍞⟝");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[5].1.value {
+		assert_eq!(content, "not directly in list");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}

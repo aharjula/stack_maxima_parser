@@ -16,6 +16,7 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
 
+ - 0.1.1 the string extraction utility logic was tuned
  - 0.1.0 the first release
 
 # Docs...
