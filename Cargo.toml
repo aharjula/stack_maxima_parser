@@ -1,0 +1,16 @@
+[package]
+name = "stack_maxima_parser"
+description = "Parser for the Modified Maxima syntax used in STACK."
+version = "0.1.0"
+license = "MIT"
+edition = "2021"
+authors = ["Matti Harjula <matti.harjula@aalto.fi>"]
+homepage = "https://github.com/aharjula/stack_maxima_parser"
+repository = "https://github.com/aharjula/stack_maxima_parser"
+readme = "README.md"
+keywords = ["Maxima", "parser", "STACK"]
+categories = ["parsing"]
+
+[dependencies]
+unicode_categories = "0.1.1"
+phf = { version = "0.11.3", features = ["macros"] }
