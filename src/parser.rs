@@ -125,12 +125,21 @@ impl MPPosition {
 /// Type of string based on its context.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StackStringUsage {
-	CASText, // For the string argument of the `castext` function.
-	CASTextConcat, // For a string argument of `castext_concat` function.
-	Include, // For `stack_include`.
-	IncludeContrib, // For `stack_include_contrib`.
-	Unknown, // Other uses of strings.
-	ListElement(usize), // Direct items of lists.
+	/// For the string argument of the `castext` function.
+	CASText, 
+	/// For a string argument of `castext_concat` function.
+	CASTextConcat, 
+	/// For any strings inside the nested list structure resulting from CASText compilation. 
+	/// The index in the containing list is the only detail provided.
+	CompiledCASText(usize),
+	/// For `stack_include` addresses.
+	Include, 
+	/// For `stack_include_contrib` addresses.
+	IncludeContrib, 
+	/// Direct items of lists. With the index in that list.
+	ListElement(usize), 
+	/// Other uses of strings.
+	Unknown
 }
 
 
@@ -401,8 +410,9 @@ impl MPNode {
 	/// and needs the initial context as an argument. Just give 
 	/// `StackStringUsage::Unknown` as the argument.
 	pub fn extract_stack_string_usage(&self, tag: StackStringUsage) -> Vec<(StackStringUsage, MPNode)> {
-		// Reset the tag to unknown for deeper structs.
-		let tc = StackStringUsage::Unknown;
+		// Reset the tag to unknown for deeper structs, unless we are 
+		// inside a compilation result.
+		let mut tc = if let StackStringUsage::CompiledCASText(_) = tag {tag.clone()} else {StackStringUsage::Unknown};
 		match &self.value {
 			MPNodeType::String(_) => {
 				vec![(tag.clone(), self.clone())]
@@ -431,9 +441,23 @@ impl MPNode {
 			},
 			MPNodeType::List(ns) => {
 				let mut result: Vec<(StackStringUsage, MPNode)> = vec![];
+				// If we happen to identify a compiled CASText style list.
+				if ns.len() > 0 {
+					if let MPNodeType::String(v) = &ns[0].value {
+						if *v == "%root".to_string() {
+							tc = StackStringUsage::CompiledCASText(0);
+						}
+					}
+				}
 				for (ind,n) in ns.iter().enumerate() {
-					for i in n.extract_stack_string_usage(StackStringUsage::ListElement(ind)) {
-						result.push(i.clone());
+					if tc != StackStringUsage::Unknown {
+						for i in n.extract_stack_string_usage(StackStringUsage::CompiledCASText(ind)) {
+							result.push(i.clone());
+						}
+					} else {
+						for i in n.extract_stack_string_usage(StackStringUsage::ListElement(ind)) {
+							result.push(i.clone());
+						}
 					}
 				}
 				result

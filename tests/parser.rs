@@ -546,6 +546,7 @@ fn utility_extract_interesting_strings() {
 stack_include(\"https://somewhere.out.there/lib.mac\");
 stack_include_contrib(\"validators.mac\");
 other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\")];
+compiled: [\"%root\",[\"%cs\",\"a common string\"]]
 ");
 
 	let mut parser = StackMaximaParser::new_no_insertions();
@@ -555,7 +556,7 @@ other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\"
 	// This function is a bit odd as it requires definition of the first guess on type.
 	let strings = result.extract_stack_string_usage(StackStringUsage::Unknown);
 
-	assert_eq!(strings.len(), 6);
+	assert_eq!(strings.len(), 9);
 
 	// Check the minimal context information.
 	assert_eq!(strings[0].0, StackStringUsage::CASText);
@@ -564,6 +565,9 @@ other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\"
 	assert_eq!(strings[3].0, StackStringUsage::IncludeContrib);
 	assert_eq!(strings[4].0, StackStringUsage::ListElement(2));
 	assert_eq!(strings[5].0, StackStringUsage::Unknown);
+	assert_eq!(strings[6].0, StackStringUsage::CompiledCASText(0));
+	assert_eq!(strings[7].0, StackStringUsage::CompiledCASText(0));
+	assert_eq!(strings[8].0, StackStringUsage::CompiledCASText(1));
 
 	// Then the values. The nodes do also have positions...
 	if let MPNodeType::String(content) = &strings[0].1.value {
@@ -593,6 +597,21 @@ other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\"
 	}
 	if let MPNodeType::String(content) = &strings[5].1.value {
 		assert_eq!(content, "not directly in list");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[6].1.value {
+		assert_eq!(content, "%root");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[7].1.value {
+		assert_eq!(content, "%cs");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[8].1.value {
+		assert_eq!(content, "a common string");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}
