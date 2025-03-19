@@ -450,7 +450,13 @@ impl MPNode {
 					}
 				}
 				for (ind,n) in ns.iter().enumerate() {
-					if tc != StackStringUsage::Unknown {
+					if let MPNodeType::String(_) = &n.value {
+						if tc != StackStringUsage::Unknown {
+							result.push((StackStringUsage::CompiledCASText(ind),n.clone()));
+						} else {
+							result.push((StackStringUsage::ListElement(ind),n.clone()));
+						}
+					} else if tc != StackStringUsage::Unknown {
 						for i in n.extract_stack_string_usage(StackStringUsage::CompiledCASText(ind)) {
 							result.push(i.clone());
 						}

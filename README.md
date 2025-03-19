@@ -15,7 +15,8 @@ In particular, this will probably be of use to those building quick modification
 Early days for this lib, expect new features as needs arise.
 
 Changelog:
-
+ 
+ - 0.1.2 some fixes to that extraction logic, also define behaviour for empty input
  - 0.1.1 the string extraction utility logic was tuned
  - 0.1.0 the first release
 

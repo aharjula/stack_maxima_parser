@@ -545,7 +545,7 @@ fn utility_extract_interesting_strings() {
 	let test = String::from("feedback(x) := castext_concat(castext(\"Something about {@x@}.\"),\" concat of strings is possible\");
 stack_include(\"https://somewhere.out.there/lib.mac\");
 stack_include_contrib(\"validators.mac\");
-other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\")];
+other: [0,true,\"random string ⠴⺗ⶮ⎟⍞⟝\",foo(\"not directly in list\"),[1],[2],[[0,1,\"1\"]]];
 compiled: [\"%root\",[\"%cs\",\"a common string\"]]
 ");
 
@@ -556,7 +556,7 @@ compiled: [\"%root\",[\"%cs\",\"a common string\"]]
 	// This function is a bit odd as it requires definition of the first guess on type.
 	let strings = result.extract_stack_string_usage(StackStringUsage::Unknown);
 
-	assert_eq!(strings.len(), 9);
+	assert_eq!(strings.len(), 10);
 
 	// Check the minimal context information.
 	assert_eq!(strings[0].0, StackStringUsage::CASText);
@@ -565,9 +565,10 @@ compiled: [\"%root\",[\"%cs\",\"a common string\"]]
 	assert_eq!(strings[3].0, StackStringUsage::IncludeContrib);
 	assert_eq!(strings[4].0, StackStringUsage::ListElement(2));
 	assert_eq!(strings[5].0, StackStringUsage::Unknown);
-	assert_eq!(strings[6].0, StackStringUsage::CompiledCASText(0));
+	assert_eq!(strings[6].0, StackStringUsage::ListElement(2));
 	assert_eq!(strings[7].0, StackStringUsage::CompiledCASText(0));
-	assert_eq!(strings[8].0, StackStringUsage::CompiledCASText(1));
+	assert_eq!(strings[8].0, StackStringUsage::CompiledCASText(0));
+	assert_eq!(strings[9].0, StackStringUsage::CompiledCASText(1));
 
 	// Then the values. The nodes do also have positions...
 	if let MPNodeType::String(content) = &strings[0].1.value {
@@ -601,18 +602,59 @@ compiled: [\"%root\",[\"%cs\",\"a common string\"]]
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[6].1.value {
-		assert_eq!(content, "%root");
+		assert_eq!(content, "1");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[7].1.value {
-		assert_eq!(content, "%cs");
+		assert_eq!(content, "%root");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
 	}
 	if let MPNodeType::String(content) = &strings[8].1.value {
+		assert_eq!(content, "%cs");
+	} else {
+		assert!(false, "Expected a string type of a node.");	
+	}
+	if let MPNodeType::String(content) = &strings[9].1.value {
 		assert_eq!(content, "a common string");
 	} else {
 		assert!(false, "Expected a string type of a node.");	
+	}
+}
+
+#[test]
+fn empty_document_empty_string() {
+	let test = String::from("");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	if let MPNodeType::Root(statements, _, _) = result.clone().expect("Should have a result from parsing.").value {
+		assert_eq!(statements.len(), 0);
+	}
+}
+
+#[test]
+fn empty_document_whitespace() {
+	let test = String::from("   	");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	if let MPNodeType::Root(statements, _, _) = result.clone().expect("Should have a result from parsing.").value {
+		assert_eq!(statements.len(), 0);
+	}
+}
+
+#[test]
+fn empty_document_comment() {
+	let test = String::from("/* comment */");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	if let MPNodeType::Root(statements, _, _) = result.clone().expect("Should have a result from parsing.").value {
+		assert_eq!(statements.len(), 0);
 	}
 }
