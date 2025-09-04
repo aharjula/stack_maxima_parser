@@ -854,67 +854,121 @@ impl StackMaximaParser {
 				shifted = true;
 			} else if let TableAction::Reduce(rule, _count, nt_name, nt_id) = action {
 				// So now we reduce.
-				let term: ParserStackItem =	match rule {
-					38 => {
+				let term: ParserStackItem =				
+				match rule {
+					0 | 18 | 22 | 26..=28 | 33..=35 | 51..=55 => {
 						let _ = stack.pop();
-						let term4dv = if let ParserStackItem::DualList(a,b) = stack.pop().unwrap() {(a,b)} else {panic!("Unexpected item in stack.");};
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						ParserStackItem::Node(term0n)
+					},
+					1 => {
+						ParserStackItem::Node(MPNode::new(MPPosition {startline: 1, startcolumn: 1, startbyte:0, endline: 1, endcolumn: 1, endbyte: 0}, MPNodeType::Root(Vec::new(),Vec::new(),Vec::new())))
+					},
+					102 => {
 						let _ = stack.pop();
-						let term3n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::FunctionCall(Box::new(MPNode::new(MPPosition::new_max(), MPNodeType::Identifier("abs".to_string()))), vec![term1n])))
+					},
+					11 => {
+						let _ = stack.pop();
+						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::List(term1v)))
+					},
+					12 => {
+						let _ = stack.pop();
+						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::Set(term1v)))
+					},
+					13 => {
+						let _ = stack.pop();
+						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::Group(term1v)))
+					},
+					14 | 30 | 32 | 41 => {
+						let _ = stack.pop();
+						let mut term1mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						term1mv.insert(0, term0n);
+						ParserStackItem::List(term1mv)
+					},
+					16 => {
+						let _ = stack.pop();
+						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let _ = stack.pop();
-						let mut conds = term4dv.0;
-						let mut contents = term4dv.1;
-						conds.insert(0, term1n);
-						contents.insert(0, term3n);
-						ParserStackItem::DualList(conds,contents)
+						term2mv.insert(0, term1n);
+						ParserStackItem::List(term2mv)
 					},
-					70..=75 | 77..=101 => {
+					19 => {
 						let _ = stack.pop();
-						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::SYMBOL(symbol) = term1t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), symbol, Box::new(term2n), InsertionType::None)))
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::BOOL(parsed, raw) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Boolean(parsed, raw)))
 						} else {
 							panic!("Unexpected token type.")
 						}
 					},
-					76 => {
+					2 => {
 						let _ = stack.pop();
-						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if term1t.endbyte == term1t.startbyte {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::InsertStars)))
-						} else if term1t.endbyte < term1t.startbyte {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::FixSpaces)))
-						} else {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::None)))
-						}
+						let term0v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let first = term0v.first().unwrap().clone();
+						let last = term0v.last().unwrap().clone();
+						ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&first, &last), MPNodeType::Root(term0v,Vec::new(),Vec::new())))
 					},
-					8..=9 => {
-						let _ = stack.pop();
-						let mut term4mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term3n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let _ = stack.pop();
-						let _ = stack.pop();
-						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+					20 => {
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::ID(parsed) = term1t.value.clone() {
-							term4mv.insert(0, MPNode::new(MPPosition::new_tn(&term0t, &term3n), MPNodeType::EvaluationFlag(Box::new(MPNode::new(MPPosition::new_t(&term1t), MPNodeType::Identifier(parsed))), Some(Box::new(term3n)))));} else{
-							panic!("Unexpected token type.")}
-						ParserStackItem::List(term4mv)
+						if let StackMaximaParserTokenType::INT(parsed, raw) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Integer(parsed, raw)))
+						} else {
+							panic!("Unexpected token type.")
+						}
+					},
+					21 => {
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::FLOAT(parsed, raw) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Float(parsed, raw)))
+						} else {
+							panic!("Unexpected token type.")
+						}
+					},
+					23 => {
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::STRING(parsed) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::String(parsed)))
+						} else {
+							panic!("Unexpected token type.")
+						}
+					},
+					24 => {
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::ID(parsed) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Identifier(parsed)))
+						} else {
+							panic!("Unexpected token type.")
+						}
 					},
 					25 => {
 						let _ = stack.pop();
@@ -926,63 +980,6 @@ impl StackMaximaParser {
 						} else {
 							panic!("Unexpected token type.")
 						}
-					},
-					102 => {
-						let _ = stack.pop();
-						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::FunctionCall(Box::new(MPNode::new(MPPosition::new_max(), MPNodeType::Identifier("abs".to_string()))), vec![term1n])))
-					},
-					7 => {
-						let _ = stack.pop();
-						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::ID(parsed) = term1t.value.clone() {
-							term2mv.insert(0, MPNode::new(MPPosition::new_tt(&term0t, &term1t), MPNodeType::EvaluationFlag(Box::new(MPNode::new(MPPosition::new_t(&term1t), MPNodeType::Identifier(parsed))), None)));
-						} else {
-							panic!("Unexpected token type.")}
-						ParserStackItem::List(term2mv)
-					},
-					37 => {
-						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let _ = stack.pop();
-						ParserStackItem::DualList(Vec::new(),vec![term1n])
-					},
-					4 => {
-						let _ = stack.pop();
-						let mut term3mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term2v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let _ = stack.pop();
-						let mut last = term1n.clone();
-						if !term2v.is_empty() {
-							last = term2v.last().unwrap().clone();
-						}
-						term3mv.insert(0, MPNode::new(MPPosition::new_nn(&term1n, &last), MPNodeType::Statement(Box::new(term1n), term2v)));
-						ParserStackItem::List(term3mv)
-					},
-					5 | 10 | 15 | 17 | 31 | 42 => {
-						ParserStackItem::List(Vec::new())
-					},
-					13 => {
-						let _ = stack.pop();
-						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::Group(term1v)))
 					},
 					29 => {
 						let _ = stack.pop();
@@ -1002,34 +999,19 @@ impl StackMaximaParser {
 						}
 						ParserStackItem::Node(result)
 					},
-					24 => {
+					3 => {
 						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::ID(parsed) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Identifier(parsed)))
-						} else {
-							panic!("Unexpected token type.")
+						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let mut last = term0n.clone();
+						if !term1v.is_empty() {
+							last = term1v.last().unwrap().clone();
 						}
-					},
-					43..=50 => {
-						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::KEYWORD(parsed, _) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &term1n), MPNodeType::LoopBit(parsed, Box::new(term1n))))
-						} else {
-							panic!("Unexpected token type.")
-						}
-					},
-					23 => {
-						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::STRING(parsed) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::String(parsed)))
-						} else {
-							panic!("Unexpected token type.")
-						}
+						term2mv.insert(0, MPNode::new(MPPosition::new_nn(&term0n, &last), MPNodeType::Statement(Box::new(term0n), term1v)));
+						ParserStackItem::List(term2mv)
 					},
 					36 => {
 						let _ = stack.pop();
@@ -1052,58 +1034,87 @@ impl StackMaximaParser {
 						contents.insert(0, term3n);
 						ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &last), MPNodeType::If(conds, contents)))
 					},
+					37 => {
+						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let _ = stack.pop();
+						ParserStackItem::DualList(Vec::new(),vec![term1n])
+					},
+					38 => {
+						let _ = stack.pop();
+						let term4dv = if let ParserStackItem::DualList(a,b) = stack.pop().unwrap() {(a,b)} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term3n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let mut conds = term4dv.0;
+						let mut contents = term4dv.1;
+						conds.insert(0, term1n);
+						contents.insert(0, term3n);
+						ParserStackItem::DualList(conds,contents)
+					},
 					39 => {
 						ParserStackItem::DualList(Vec::new(),Vec::new())
 					},
-					0 | 18 | 22 | 26..=28 | 33..=35 | 51..=55 => {
+					4 => {
 						let _ = stack.pop();
-						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						ParserStackItem::Node(term0n)
-					},
-					21 => {
+						let mut term3mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::FLOAT(parsed, raw) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Float(parsed, raw)))
-						} else {
-							panic!("Unexpected token type.")
+						let term2v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let mut last = term1n.clone();
+						if !term2v.is_empty() {
+							last = term2v.last().unwrap().clone();
 						}
+						term3mv.insert(0, MPNode::new(MPPosition::new_nn(&term1n, &last), MPNodeType::Statement(Box::new(term1n), term2v)));
+						ParserStackItem::List(term3mv)
 					},
-					2 => {
+					40 => {
+						let _ = stack.pop();
+						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term0v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let first = term0v.first().unwrap().clone();
-						let last = term0v.last().unwrap().clone();
-						ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&first, &last), MPNodeType::Root(term0v,Vec::new(),Vec::new())))
+						if term0v.is_empty() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term1t, &term2n), MPNodeType::Loop(Box::new(term2n), Vec::new())))
+						} else {
+							let first = term0v[0].clone();
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&first, &term2n), MPNodeType::Loop(Box::new(term2n), term0v)))
+						}
 					},
-					20 => {
+					43..=50 => {
+						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::INT(parsed, raw) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Integer(parsed, raw)))
+						if let StackMaximaParserTokenType::KEYWORD(parsed, _) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &term1n), MPNodeType::LoopBit(parsed, Box::new(term1n))))
 						} else {
 							panic!("Unexpected token type.")
 						}
 					},
-					11 => {
+					5 | 10 | 15 | 17 | 31 | 42 => {
+						ParserStackItem::List(Vec::new())
+					},
+					56..=67 => {
 						let _ = stack.pop();
-						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::List(term1v)))
-					},
-					14 | 30 | 32 | 41 => {
-						let _ = stack.pop();
-						let mut term1mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						term1mv.insert(0, term0n);
-						ParserStackItem::List(term1mv)
-					},
-					1 => {
-						ParserStackItem::Node(MPNode::new(MPPosition {startline: 1, startcolumn: 1, startbyte:0, endline: 1, endcolumn: 1, endbyte: 0}, MPNodeType::Root(Vec::new(),Vec::new(),Vec::new())))
+						if let StackMaximaParserTokenType::SYMBOL(symbol) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &term1n), MPNodeType::PrefixOperation(symbol, Box::new(term1n))))
+						} else {
+							panic!("Unexpected token type.")
+						}
 					},
 					6 => {
 						let _ = stack.pop();
@@ -1122,77 +1133,68 @@ impl StackMaximaParser {
 							panic!("Unexpected token type.")
 						}
 					},
-					56..=67 => {
+					7 => {
 						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::SYMBOL(symbol) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &term1n), MPNodeType::PrefixOperation(symbol, Box::new(term1n))))
+						if let StackMaximaParserTokenType::ID(parsed) = term1t.value.clone() {
+							term2mv.insert(0, MPNode::new(MPPosition::new_tt(&term0t, &term1t), MPNodeType::EvaluationFlag(Box::new(MPNode::new(MPPosition::new_t(&term1t), MPNodeType::Identifier(parsed))), None)));
 						} else {
-							panic!("Unexpected token type.")
-						}
-					},
-					16 => {
-						let _ = stack.pop();
-						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let _ = stack.pop();
-						term2mv.insert(0, term1n);
+							panic!("Unexpected token type.")}
 						ParserStackItem::List(term2mv)
 					},
-					3 => {
-						let _ = stack.pop();
-						let mut term2mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let _ = stack.pop();
-						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						let mut last = term0n.clone();
-						if !term1v.is_empty() {
-							last = term1v.last().unwrap().clone();
-						}
-						term2mv.insert(0, MPNode::new(MPPosition::new_nn(&term0n, &last), MPNodeType::Statement(Box::new(term0n), term1v)));
-						ParserStackItem::List(term2mv)
-					},
-					40 => {
+					70 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
-						let term0v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if term0v.is_empty() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term1t, &term2n), MPNodeType::Loop(Box::new(term2n), Vec::new())))
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if term1t.endbyte == term1t.startbyte {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::InsertStars)))
+						} else if term1t.endbyte < term1t.startbyte {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::FixSpaces)))
 						} else {
-							let first = term0v[0].clone();
-							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&first, &term2n), MPNodeType::Loop(Box::new(term2n), term0v)))
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::None)))
 						}
 					},
-					19 => {
+					71..=101 => {
 						let _ = stack.pop();
-						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						if let StackMaximaParserTokenType::BOOL(parsed, raw) = term0t.value.clone() {
-							ParserStackItem::Node(MPNode::new(MPPosition::new_t(&term0t), MPNodeType::Boolean(parsed, raw)))
+						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::SYMBOL(symbol) = term1t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), symbol, Box::new(term2n), InsertionType::None)))
 						} else {
 							panic!("Unexpected token type.")
 						}
 					},
-					12 => {
+					8..=9 => {
 						let _ = stack.pop();
-						let term2t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let mut term4mv = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
-						let term1v = if let ParserStackItem::List(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let term3n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
-						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::Set(term1v)))
+						if let StackMaximaParserTokenType::ID(parsed) = term1t.value.clone() {
+							term4mv.insert(0, MPNode::new(MPPosition::new_tn(&term0t, &term3n), MPNodeType::EvaluationFlag(Box::new(MPNode::new(MPPosition::new_t(&term1t), MPNodeType::Identifier(parsed))), Some(Box::new(term3n)))));} else{
+							panic!("Unexpected token type.")}
+						ParserStackItem::List(term4mv)
 					},
 					_ => {
 						panic!("Unknown rule.");
 					}
-				};
+				}
+;
 
 				// If the rule was the Start rule then we can end here.
 				if nt_name == *"Start" {
@@ -1242,8 +1244,6 @@ impl StackMaximaParser {
 					stack.push(term);	
 				}
 
-				
-
 				// Else figure out where to go now.
 				if let ParserStackItem::State(state) = stack[stack.len()-2] {
 					let next: usize = *parsertables.goto.get(&state).unwrap().get(&nt_id).unwrap();
@@ -1251,11 +1251,7 @@ impl StackMaximaParser {
 				} else {
 					panic!("Expected a state in the stack, got something else.");
 				}
-
 			}
-
 		}
-
-
 	}
 }
