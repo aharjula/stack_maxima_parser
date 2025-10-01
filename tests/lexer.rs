@@ -365,3 +365,35 @@ fn keywords() {
 		assert!(false, "Expected WS got something else.");
 	}
 }
+
+
+#[test]
+fn basic_comments() {
+	let test0 = String::from("/**/");
+	let test1 = String::from("/***/");
+	let test2 = String::from("/****/");
+
+	let mut lexer0 = StackMaximaLexer::new(test0);
+	let mut lexer1 = StackMaximaLexer::new(test1);
+	let mut lexer2 = StackMaximaLexer::new(test2);
+
+	let token0: StackMaximaToken = lexer0.next_token().expect("Should have 1 token.");
+	let token1: StackMaximaToken = lexer1.next_token().expect("Should have 1 token.");
+	let token2: StackMaximaToken = lexer2.next_token().expect("Should have 1 token.");
+
+	if let StackMaximaParserTokenType::COMMENT(ref raw) = token0.value {
+		assert_eq!(raw, "");
+	} else {
+		assert!(false, "Expected COMMENT got something else.");
+	}
+	if let StackMaximaParserTokenType::COMMENT(ref raw) = token1.value {
+		assert_eq!(raw, "*");
+	} else {
+		assert!(false, "Expected COMMENT got something else.");
+	}
+	if let StackMaximaParserTokenType::COMMENT(ref raw) = token2.value {
+		assert_eq!(raw, "**");
+	} else {
+		assert!(false, "Expected COMMENT got something else.");
+	}
+}

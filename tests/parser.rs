@@ -658,3 +658,46 @@ fn empty_document_comment() {
 		assert_eq!(statements.len(), 0);
 	}
 }
+
+#[test]
+fn keywords_as_ids() {
+	let test = String::from("subst(%not, \"not\", ex)");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+	let debug_target = 
+"subst(%not, \"not\", ex)
+----------------------
+********************** | Root
+********************** | Statement
+********************** | FunctionCall: 3 args
+*****                  | ID: subst
+      ****             | ID: %not
+            *****      | String
+                   **  | ID: ex
+";
+	assert_eq!(debug, debug_target);
+}
+
+
+
+#[test]
+fn try_almost_everything() {
+	// Just check that the lexer has the tokens and the rules exist.
+	// Try to remember to add any new operators here.
+	let test = String::from("
+		foo(x,[1/(1.2-y),%pi],{})@bar,simp=false;
+		if a then b else return(e),simp:true;
+		t::= a[d](y);
+		t:= if (is(tru)) then t elseif is(x <= y) then f else maybe;
+		t: for x in ''y from 'z next foo thru bar while +%Z unless not -%X do something;
+		t : is(z>y)! nounor ?is (z<=y*u);
+		t ~ |y|; subst(%not,b,y);
+");
+
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let _result: MPNode = parser.parse(test.clone()).expect("Should parse just fine.");
+}

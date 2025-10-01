@@ -259,7 +259,7 @@ impl StackMaximaLexer {
                         }
                         self.eat_num(c0)
                     },
-                    '-' | '(' | ')' | '[' | ']' | '{' | '}' | '~' | '=' | '|' => {
+                    '-' | '(' | ')' | '[' | ']' | '{' | '}' | '~' | '=' | '|' | '@' => {
                         // Simple symbols.
                         token.value = StackMaximaParserTokenType::SYMBOL(value);
                         Some(token)
@@ -942,8 +942,7 @@ impl StackMaximaLexer {
                                         },
                                         _ => {
                                             value.push(c1.c);
-                                            value.push(c2.c);
-                                            token.length += 1;
+                                            self.pushc(c2);
                                         }
                                     }
                                 }
@@ -1027,7 +1026,7 @@ impl StackMaximaLexer {
                 let c = self.popc();
                 match c {
                     None => {
-                        token.value = StackMaximaParserTokenType::SYMBOL(value);
+                        token.value = StackMaximaParserTokenType::KEYWORD(value.clone(), value);
                         Some(token)
                     },
                     Some(cn) => {
@@ -1041,7 +1040,7 @@ impl StackMaximaLexer {
                             },
                             _ => {
                                 self.pushc(cn);
-                                token.value = StackMaximaParserTokenType::SYMBOL(value);
+                                token.value = StackMaximaParserTokenType::KEYWORD(converted, value);
                                 Some(token)
                             }
                         }
@@ -1050,7 +1049,7 @@ impl StackMaximaLexer {
             },
             "nounnot" | "%not" | "%and" | "%or" | "and" | "or" | "nouneq" | "nounadd" | "nounand" | "nounor" | "nounsub" | "nounpow" | "noundiv" | "nand" | "nor" | "implies" | "xor" | "xnor" | "UNARY_RECIP" | "unary_recip" | "blankmult" => {
                 // Various ops.
-                token.value = StackMaximaParserTokenType::SYMBOL(value);
+                token.value = StackMaximaParserTokenType::KEYWORD(converted, value);
                 Some(token)
             },
             "if" | "then" | "elseif" | "else" | "do" | "for" | "from" | "step" | "next" | "in" | "thru" | "while" | "unless" => {

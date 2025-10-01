@@ -588,7 +588,7 @@ impl MPNode {
 
 
 /// Internal logic, for keeping track of the parser-state.
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 enum ParserStackItem {
 	Token(StackMaximaToken),
 	Node(MPNode),
@@ -680,6 +680,20 @@ impl StackMaximaParser {
 		// Are we currently shifting?
 		let mut shifted: bool = true;
 
+
+        // For KEYWORD -> ID remapping we need to have revert capability.
+        // Basically, if someone uses a keyword like `in` or `%not` in
+        // variable role we do as follows:
+        //  - If an action would exist at that place for an ID.
+        //  - We clone the current stack and save it
+        //  - We also clone that token.
+        //  - If the next token finds an action all is fine
+        //    and we clean these.
+        //  - If not then we revert and consider that token as an ID.
+        let mut kreverttoken: Option<StackMaximaToken> = None;
+        let mut krevertstack: Vec<ParserStackItem> = Vec::new();
+        let mut krevertreset: i32 = 0;
+
 		// The raw token and the matching grammar item.
 		let mut token: Option<StackMaximaToken> = None;
 		let mut sym: String = "err".to_string();
@@ -757,7 +771,7 @@ impl StackMaximaParser {
 			}
 
 			// Then peek at the state at the top of the stack.
-			let current_state: usize = match stack[stack.len()-1] {
+			let mut current_state: usize = match stack[stack.len()-1] {
 				ParserStackItem::State(state) => {
 					state
 				}
@@ -769,6 +783,21 @@ impl StackMaximaParser {
 			// Do we have an action?
 			let mut action: TableAction = parsertables.get_action(current_state, sym.clone());
 			
+			// If we have a keyword, we need to consider the possibility that it is an id.
+			// So lets setup a revert point.
+			if token != None {
+				if let StackMaximaParserTokenType::KEYWORD(..) = token.clone().unwrap().value {
+					if parsertables.get_action(current_state, "ID".to_string()) != TableAction::None {
+						krevertstack = stack.clone();
+						kreverttoken = token.clone();
+						krevertreset = 3;
+					}
+				}
+			}
+			if krevertreset == 1 {
+				kreverttoken = None;
+			}
+
 			// If no action we are in a bad state. We could try if an insertion would work.
 			if action == TableAction::None {
 				for attempt in &self.inserts_to_attempt {
@@ -840,11 +869,36 @@ impl StackMaximaParser {
 						}
 					}
 				}
+				// Maybe KEYWORD -> ID?
+				if action == TableAction::None && kreverttoken != None {
+					self.lexer.return_token(token.unwrap());
+					let mut ntoken = kreverttoken.unwrap();
+					if let StackMaximaParserTokenType::KEYWORD(ref v,_) = ntoken.value {
+						ntoken.value = StackMaximaParserTokenType::ID(v.clone());
+					}
+					token = Some(ntoken);
+					sym = "ID".to_string();
+					stack = krevertstack;
+					krevertstack = Vec::new();
+					kreverttoken = None;
+					krevertreset = 0;
+					current_state = match stack[stack.len()-1] {
+						ParserStackItem::State(state) => {
+							state
+						}
+						_ => {
+							panic!("The top of the stack did not hold a state.");
+						}
+					};
+					action = parsertables.get_action(current_state, sym.clone());
+				}
+
 				if action == TableAction::None {
 					// TODO generate error message
 					return None;
 				}
 			}
+			krevertreset = krevertreset - 1;
 
 			// So now we should have actions that make sense.
 			if let TableAction::Shift(target_state) = action {
@@ -1105,7 +1159,7 @@ impl StackMaximaParser {
 					5 | 10 | 15 | 17 | 31 | 42 => {
 						ParserStackItem::List(Vec::new())
 					},
-					56..=67 => {
+					56..=61 | 63..=66 => {
 						let _ = stack.pop();
 						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1121,6 +1175,17 @@ impl StackMaximaParser {
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = term0t;
 						ParserStackItem::List(Vec::new())
+					},
+					62 | 67 | 103..=104 => {
+						let _ = stack.pop();
+						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::KEYWORD(symbol,_) = term0t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_tn(&term0t, &term1n), MPNodeType::PrefixOperation(symbol, Box::new(term1n))))
+						} else {
+							panic!("Unexpected token type.")
+						}
 					},
 					68..=69 => {
 						let _ = stack.pop();
@@ -1161,7 +1226,7 @@ impl StackMaximaParser {
 							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::None)))
 						}
 					},
-					71..=101 => {
+					71..=80 | 85..=94 | 108 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1189,6 +1254,19 @@ impl StackMaximaParser {
 							term4mv.insert(0, MPNode::new(MPPosition::new_tn(&term0t, &term3n), MPNodeType::EvaluationFlag(Box::new(MPNode::new(MPPosition::new_t(&term1t), MPNodeType::Identifier(parsed))), Some(Box::new(term3n)))));} else{
 							panic!("Unexpected token type.")}
 						ParserStackItem::List(term4mv)
+					},
+					81..=84 | 95..=101 | 105..=107 => {
+						let _ = stack.pop();
+						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						if let StackMaximaParserTokenType::KEYWORD(symbol,_) = term1t.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), symbol, Box::new(term2n), InsertionType::None)))
+						} else {
+							panic!("Unexpected token type.")
+						}
 					},
 					_ => {
 						panic!("Unknown rule.");
