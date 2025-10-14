@@ -16,6 +16,8 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.4 plenty of extra operators and work on operator precedence, also
+   the storage format of the tables has slightly changed
  - 0.1.3 fixed comment tokeniser and added logic to fallback to interpret KEYWORDs as IDs also `@` as infix operator
  - 0.1.2 some fixes to that extraction logic, also define behaviour for empty input
  - 0.1.1 the string extraction utility logic was tuned

@@ -710,7 +710,7 @@ impl StackMaximaParser {
 						if self.collect_comments {
 							comments.push(
 								MPNode::new(
-									MPPosition::new_t(&token.unwrap()),
+									MPPosition::new_t(&token.clone().unwrap()),
 									MPNodeType::Comment(content)
 								)
 							);
@@ -723,7 +723,7 @@ impl StackMaximaParser {
 				// Then convert the token to grammar symbol.
 				// Is it the end?
 				if token.is_none() {
-					sym = "\u{0000}".to_string();
+					sym = "END OF FILE".to_string();
 				} else {
 					match token.clone().unwrap().value {
     					StackMaximaParserTokenType::KEYWORD(content,_) => {
@@ -745,16 +745,71 @@ impl StackMaximaParser {
     						sym = "STRING".to_string();
     					},
     					StackMaximaParserTokenType::SYMBOL(content) => {
-    						sym = content;
+    						if content == "^".to_string() || content == "^^".to_string() || content == "**".to_string() {
+    							// Tricky synthetic tokens for power + unary op cases.
+    							let mut lookahead: Vec<StackMaximaToken> = Vec::new();
+    							let mut next: Option<StackMaximaToken> = self.lexer.next_token();
+	   							while next.is_some() {
+									if let StackMaximaParserTokenType::WS(_) = next.clone().unwrap().value {
+										lookahead.push(next.clone().unwrap());
+										next = self.lexer.next_token();
+									} else if let StackMaximaParserTokenType::COMMENT(content) = token.clone().unwrap().value {
+										if self.collect_comments {
+											comments.push(
+												MPNode::new(
+													MPPosition::new_t(&token.clone().unwrap()),
+													MPNodeType::Comment(content)
+												)
+											);
+										}
+										next = self.lexer.next_token();
+									} else {
+										break;
+									}
+								}
+								if next.is_some() {
+									if let StackMaximaParserTokenType::SYMBOL(op2) = next.clone().unwrap().value {
+										if op2 == "+".to_string() || op2 == "-".to_string() || op2 == "+-".to_string() || op2 == "#pm#".to_string() {
+											token = Some(token.unwrap().merge(next.unwrap()));
+											sym = format!(" {}{}", content, op2);
+										} else {
+											// Return the unused future.
+											sym = content;
+											self.lexer.return_token(next.unwrap());
+											next = lookahead.pop();
+											while next.is_some() {
+												self.lexer.return_token(next.unwrap());
+												next = lookahead.pop();
+											}
+										}
+									} else {
+										// Return the unused future.
+										sym = content;
+										self.lexer.return_token(next.unwrap());
+										next = lookahead.pop();
+										while next.is_some() {
+											self.lexer.return_token(next.unwrap());
+											next = lookahead.pop();
+										}
+									}
+								} else {
+									// If None the end is near and there is nothing worth
+									// looking at in the future. No point in returning the future.
+									sym = content;
+								}
+
+    						} else {
+	    						sym = content;
+	    					}
     					},
     					StackMaximaParserTokenType::LISTSEP(_) => {
-    						sym = "LIST_SEP".to_string();
+    						sym = "LIST SEP".to_string();
     					},
     					StackMaximaParserTokenType::ENDTOKEN(_) => {
-    						sym = "END_TOKEN".to_string();
+    						sym = "END TOKEN".to_string();
     					},
     					StackMaximaParserTokenType::LISPID(_) => {
-    						sym = "LISP_ID".to_string();
+    						sym = "LISP ID".to_string();
     					},
 						StackMaximaParserTokenType::COMMENT(_) => {
 							panic!("No comments should appear here.");
@@ -830,10 +885,10 @@ impl StackMaximaParser {
 							break;
 						}
 					} else if let StackMaximaParserTokenType::ENDTOKEN(_a) = &attempt.value {
-						let maybe_action: TableAction = parsertables.get_action(current_state, "END_TOKEN".to_string());
+						let maybe_action: TableAction = parsertables.get_action(current_state, "END TOKEN".to_string());
 						if maybe_action != TableAction::None {
 							self.lexer.return_token(token.clone().unwrap());
-							sym = "END_TOKEN".to_string();
+							sym = "END TOKEN".to_string();
 							let mut itoken = attempt.clone();
 							let otoken = token.unwrap();
 							// Copy the position to the inserted one.
@@ -849,10 +904,10 @@ impl StackMaximaParser {
 							break;
 						}
 					} else if let StackMaximaParserTokenType::LISTSEP(_a) = &attempt.value {
-						let maybe_action: TableAction = parsertables.get_action(current_state, "LIST_SEP".to_string());
+						let maybe_action: TableAction = parsertables.get_action(current_state, "LIST SEP".to_string());
 						if maybe_action != TableAction::None {
 							self.lexer.return_token(token.clone().unwrap());
-							sym = "LIST_SEP".to_string();
+							sym = "LIST SEP".to_string();
 							let mut itoken = attempt.clone();
 							let otoken = token.unwrap();
 							// Copy the position to the inserted one.
@@ -935,6 +990,25 @@ impl StackMaximaParser {
 						let _ = stack.pop();
 						let term0t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						ParserStackItem::Node(MPNode::new(MPPosition::new_tt(&term0t, &term2t), MPNodeType::List(term1v)))
+					},
+					113..=124 => {
+						let _ = stack.pop();
+						let mut term2mn = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term1t = if let ParserStackItem::Token(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let _ = stack.pop();
+						let term0n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
+						let (op1,op2) = term1t.split();
+						if let StackMaximaParserTokenType::SYMBOL(symbol2) = op2.value.clone() {
+							term2mn = MPNode::new(MPPosition::new_tn(&op2, &term2mn), MPNodeType::PrefixOperation(symbol2, Box::new(term2mn)))
+						} else {
+							panic!("Unexpected token type.")
+						};
+						if let StackMaximaParserTokenType::SYMBOL(symbol1) = op1.value.clone() {
+							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2mn), MPNodeType::Operation(Box::new(term0n), symbol1, Box::new(term2mn), InsertionType::None)))
+						} else {
+							panic!("Unexpected token type.")
+						}
 					},
 					12 => {
 						let _ = stack.pop();
@@ -1159,7 +1233,7 @@ impl StackMaximaParser {
 					5 | 10 | 15 | 17 | 31 | 42 => {
 						ParserStackItem::List(Vec::new())
 					},
-					56..=61 | 63..=66 => {
+					56..=61 | 63..=66 | 111 => {
 						let _ = stack.pop();
 						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1226,7 +1300,7 @@ impl StackMaximaParser {
 							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::None)))
 						}
 					},
-					71..=80 | 85..=94 | 108 => {
+					71..=80 | 85..=94 | 108..=110 | 125..=128 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1255,7 +1329,7 @@ impl StackMaximaParser {
 							panic!("Unexpected token type.")}
 						ParserStackItem::List(term4mv)
 					},
-					81..=84 | 95..=101 | 105..=107 => {
+					81..=84 | 95..=101 | 105..=107 | 112 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();

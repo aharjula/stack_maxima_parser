@@ -120,6 +120,41 @@ impl std::fmt::Debug for StackMaximaToken {
         write!(f, "[{:>3}:{}-{}:{} for {}, {:?}]", self.startline, self.startcolumn, self.endline, self.endcolumn, self.length, self.value)
     }
 }
+impl StackMaximaToken {
+    // For special precedence edge cases. Only for symbols.
+    pub fn merge(&self, other: StackMaximaToken) -> StackMaximaToken {
+        let mut t: StackMaximaToken = self.clone();
+        t.endline = other.endline;
+        t.endcolumn = other.endcolumn;
+        t.endbyte = other.endbyte;
+        t.length = t.length + 1 + other.length;
+        let op1: String = if let StackMaximaParserTokenType::SYMBOL(ref a) = t.value {a.clone()} else {panic!("Unexpected token type.")};
+        let op2: String = if let StackMaximaParserTokenType::SYMBOL(ref a) = other.value {a.clone()} else {panic!("Unexpected token type.")};
+        t.value = StackMaximaParserTokenType::SYMBOL(format!("{} {}",op1,op2));
+        return t;
+    }
+    pub fn split(&self) -> (StackMaximaToken, StackMaximaToken) {
+        let mut t1 = self.clone();
+        let mut t2 = self.clone();
+
+        if let StackMaximaParserTokenType::SYMBOL(ref combo) = self.value {
+            if let Some((op1, op2)) = combo.split_once(' ') {
+                t1.value = StackMaximaParserTokenType::SYMBOL(op1.to_string());
+                t2.value = StackMaximaParserTokenType::SYMBOL(op2.to_string());
+
+                t1.endline = t1.startline;
+                t1.endcolumn = t1.startcolumn + op1.len();
+                t1.endbyte = t1.startbyte + op1.len();
+
+                t2.startline = t2.endline;
+                t2.startbyte = t2.endbyte - op2.len() + 1;
+                t2.startcolumn = t2.endcolumn - op2.len() + 1;
+            }
+        }
+
+        return (t1,t2);
+    }
+}
 
 /// Internally, every single unicode char we pull out of the stream is given coordinates.
 /// Should a char be mapped to multiple chars they will share the original chars coords.

@@ -432,6 +432,59 @@ fn precedence7() {
 	assert_eq!(debug, debug_target);
 }
 
+#[test]
+fn precedence8() {
+	let test = String::from("a or b and c");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+
+	let debug: String = result.unwrap().debug_print(test);
+	let debug_target = 
+"a or b and c
+------------
+************ | Root
+************ | Statement
+************ | Op: or
+*            | ID: a
+     ******* | Op: and
+     *       | ID: b
+           * | ID: c
+";
+	assert_eq!(debug, debug_target);
+}
+
+
+#[test]
+fn precedence9() {
+	let test = String::from("a:tan^-1*(x)-1");
+	let mut parser = StackMaximaParser::new_with_insert_stars();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+
+	let debug: String = result.unwrap().debug_print(test);
+	let debug_target = 
+"a:tan^-1*(x)-1
+--------------
+************** | Root
+************** | Statement
+************** | Op: :
+*              | ID: a
+  ************ | Op: -
+  **********   | Op: *
+  ******       | Op: ^
+  ***          | ID: tan
+      **       | PrefixOp: -
+       *       | Int: 1
+         ***   | Group: 1 items
+          *    | ID: x
+             * | Int: 1
+";
+	assert_eq!(debug, debug_target);
+}
+
 
 
 
