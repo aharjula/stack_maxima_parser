@@ -754,3 +754,30 @@ fn try_almost_everything() {
 
 	let _result: MPNode = parser.parse(test.clone()).expect("Should parse just fine.");
 }
+
+
+#[test]
+fn assigns_precedence() {
+	let test = String::from("c1:f(x):=x^3");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+	let debug_target = 
+"c1:f(x):=x^3
+------------
+************ | Root
+************ | Statement
+************ | Op: :
+**           | ID: c1
+   ********* | Op: :=
+   ****      | FunctionCall: 1 args
+   *         | ID: f
+     *       | ID: x
+         *** | Op: ^
+         *   | ID: x
+           * | Int: 3
+";
+	assert_eq!(debug, debug_target);
+}
