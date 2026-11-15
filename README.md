@@ -16,6 +16,7 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.6 changes to the precedences noted in STACK issue #1882
  - 0.1.5 some special assignment operator behaviour.
  - 0.1.4 plenty of extra operators and work on operator precedence, also
    the storage format of the tables has slightly changed

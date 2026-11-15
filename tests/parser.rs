@@ -781,3 +781,102 @@ fn assigns_precedence() {
 ";
 	assert_eq!(debug, debug_target);
 }
+
+#[test]
+fn stack_1882() {
+	let test = String::from("while not gcd(p,q) = 1 do p:p+1;");
+  let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+  let debug_target = 
+"while not gcd(p,q) = 1 do p:p+1;
+--------------------------------
+*******************************  | Root
+*******************************  | Statement
+*******************************  | Loop
+**********************           | LoopBit: while
+      ****************           | PrefixOp: not 
+          ************           | Op: =
+          ********               | FunctionCall: 2 args
+          ***                    | ID: gcd
+              *                  | ID: p
+                *                | ID: q
+                     *           | Int: 1
+                          *****  | Op: :
+                          *      | ID: p
+                            ***  | Op: +
+                            *    | ID: p
+                              *  | Int: 1
+";
+  assert_eq!(debug, debug_target);
+}
+
+#[test]
+fn sub_add_div_mul() {
+	let test = String::from("[a-b+c,-a+b,a/b*c];");
+  let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+  let debug_target = 
+"[a-b+c,-a+b,a/b*c];
+-------------------
+******************  | Root
+******************  | Statement
+******************  | List: 3 items
+ *****              | Op: +
+ ***                | Op: -
+ *                  | ID: a
+   *                | ID: b
+     *              | ID: c
+       ****         | Op: +
+       **           | PrefixOp: -
+        *           | ID: a
+          *         | ID: b
+            *****   | Op: *
+            ***     | Op: /
+            *       | ID: a
+              *     | ID: b
+                *   | ID: c
+";
+  assert_eq!(debug, debug_target);
+}
+
+#[test]
+fn log_and_rel() {
+	let test = String::from("[1=x and x=1 and x=x,not x<y];");
+  let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+  let debug_target = 
+"[1=x and x=1 and x=x,not x<y];
+------------------------------
+*****************************  | Root
+*****************************  | Statement
+*****************************  | List: 2 items
+ *******************           | Op: and
+ ***                           | Op: =
+ *                             | Int: 1
+   *                           | ID: x
+         ***********           | Op: and
+         ***                   | Op: =
+         *                     | ID: x
+           *                   | Int: 1
+                 ***           | Op: =
+                 *             | ID: x
+                   *           | ID: x
+                     *******   | PrefixOp: not 
+                         ***   | Op: <
+                         *     | ID: x
+                           *   | ID: y
+";
+  assert_eq!(debug, debug_target);
+}
