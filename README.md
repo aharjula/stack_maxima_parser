@@ -16,6 +16,8 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.7 arithmetic binds tighter than `and`/`or` (`a+2 and b` is `(a+2) and b`), and
+   the infix `xor`, `xnor`, `nor` and `nand` no longer panic
  - 0.1.6 changes to the precedences noted in STACK issue #1882
  - 0.1.5 some special assignment operator behaviour.
  - 0.1.4 plenty of extra operators and work on operator precedence, also

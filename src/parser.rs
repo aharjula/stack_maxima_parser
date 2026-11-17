@@ -1300,7 +1300,7 @@ impl StackMaximaParser {
 							ParserStackItem::Node(MPNode::new(MPPosition::new_nn(&term0n, &term2n), MPNodeType::Operation(Box::new(term0n), "*".to_string(), Box::new(term2n), InsertionType::None)))
 						}
 					},
-					71..=80 | 85..=94 | 108..=110 | 125..=128 => {
+					71..=80 | 85..=94 | 108..=110 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1329,7 +1329,7 @@ impl StackMaximaParser {
 							panic!("Unexpected token type.")}
 						ParserStackItem::List(term4mv)
 					},
-					81..=84 | 95..=101 | 105..=107 | 112 => {
+					81..=84 | 95..=101 | 105..=107 | 112 | 125..=128 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();

@@ -880,3 +880,138 @@ fn log_and_rel() {
 ";
   assert_eq!(debug, debug_target);
 }
+#[test]
+fn arith_before_logic() {
+	let test = String::from("[a+2 and b,a/b or c,x^2 and -y,m<=1/2 and m>-2];");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+	let debug_target = 
+"[a+2 and b,a/b or c,x^2 and -y,m<=1/2 and m>-2];
+------------------------------------------------
+***********************************************  | Root
+***********************************************  | Statement
+***********************************************  | List: 4 items
+ *********                                       | Op: and
+ ***                                             | Op: +
+ *                                               | ID: a
+   *                                             | Int: 2
+         *                                       | ID: b
+           ********                              | Op: or
+           ***                                   | Op: /
+           *                                     | ID: a
+             *                                   | ID: b
+                  *                              | ID: c
+                    **********                   | Op: and
+                    ***                          | Op: ^
+                    *                            | ID: x
+                      *                          | Int: 2
+                            **                   | PrefixOp: -
+                             *                   | ID: y
+                               ***************   | Op: and
+                               ******            | Op: <=
+                               *                 | ID: m
+                                  ***            | Op: /
+                                  *              | Int: 1
+                                    *            | Int: 2
+                                          ****   | Op: >
+                                          *      | ID: m
+                                            **   | PrefixOp: -
+                                             *   | Int: 2
+";
+	assert_eq!(debug, debug_target);
+}
+
+#[test]
+fn logic_after_prefix_and_rel() {
+	let test = String::from("[-a and b,a.b or c,x^-1 and y,a and b+c,not a+1 and b];");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+	let debug_target = 
+"[-a and b,a.b or c,x^-1 and y,a and b+c,not a+1 and b];
+-------------------------------------------------------
+******************************************************  | Root
+******************************************************  | Statement
+******************************************************  | List: 5 items
+ ********                                               | Op: and
+ **                                                     | PrefixOp: -
+  *                                                     | ID: a
+        *                                               | ID: b
+          ********                                      | Op: or
+          ***                                           | Op: .
+          *                                             | ID: a
+            *                                           | ID: b
+                 *                                      | ID: c
+                   **********                           | Op: and
+                   ****                                 | Op: ^
+                   *                                    | ID: x
+                     **                                 | PrefixOp: -
+                      *                                 | Int: 1
+                            *                           | ID: y
+                              *********                 | Op: and
+                              *                         | ID: a
+                                    ***                 | Op: +
+                                    *                   | ID: b
+                                      *                 | ID: c
+                                        *************   | Op: and
+                                        *******         | PrefixOp: not 
+                                            ***         | Op: +
+                                            *           | ID: a
+                                              *         | Int: 1
+                                                    *   | ID: b
+";
+	assert_eq!(debug, debug_target);
+}
+
+#[test]
+fn keyword_logic_ops() {
+	let test = String::from("[a xor b,a nand b,a nor b,a xnor b,a+1 xor b,a=b xor c,a and b xor c];");
+	let mut parser = StackMaximaParser::new_no_insertions();
+
+	let result: Option<MPNode> = parser.parse(test.clone());
+
+	let debug: String = result.unwrap().debug_print(test);
+
+	let debug_target = 
+"[a xor b,a nand b,a nor b,a xnor b,a+1 xor b,a=b xor c,a and b xor c];
+----------------------------------------------------------------------
+*********************************************************************  | Root
+*********************************************************************  | Statement
+*********************************************************************  | List: 7 items
+ *******                                                               | Op: xor
+ *                                                                     | ID: a
+       *                                                               | ID: b
+         ********                                                      | Op: nand
+         *                                                             | ID: a
+                *                                                      | ID: b
+                  *******                                              | Op: nor
+                  *                                                    | ID: a
+                        *                                              | ID: b
+                          ********                                     | Op: xnor
+                          *                                            | ID: a
+                                 *                                     | ID: b
+                                   *********                           | Op: xor
+                                   ***                                 | Op: +
+                                   *                                   | ID: a
+                                     *                                 | Int: 1
+                                           *                           | ID: b
+                                             *********                 | Op: xor
+                                             ***                       | Op: =
+                                             *                         | ID: a
+                                               *                       | ID: b
+                                                     *                 | ID: c
+                                                       *************   | Op: xor
+                                                       *******         | Op: and
+                                                       *               | ID: a
+                                                             *         | ID: b
+                                                                   *   | ID: c
+";
+	assert_eq!(debug, debug_target);
+}
