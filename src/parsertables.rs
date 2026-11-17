@@ -22,13 +22,16 @@ pub enum TableAction {
 impl ParserTables<'_> {
     // Decodes an action from the table.
     pub fn get_action(&self, state: usize, token: String) -> TableAction {
-        if state > self.table.len() {
+        if state >= self.table.len() {
             // Maybe we should have a more specific return for this.
             println!("Something is wrong, you are looking for state {} when there is no such state", state);
             return TableAction::None;
         }
         // TODO: maybe this list should be a map here.
-        let t: &usize = self.terminals.get(&token).expect("Unknown token!");
+        // A token the grammar does not know cannot be shifted: a syntax error.
+        let Some(t) = self.terminals.get(&token) else {
+            return TableAction::None;
+        };
         let val = self.table[state].get(t);
         match val {
             None => {

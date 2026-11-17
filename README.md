@@ -21,7 +21,10 @@ Changelog:
    `a*b/c` is `(a*b)/c`, `-a*b` is `(-a)*b`, `a+2 and b` is `(a+2) and b`, and STACK's
    logic operators have their own levels. Same-level operators group to the left.
    `nounsub` is a prefix operator, `nounmul` is lexed, and the infix `xor`, `xnor`, `nor`
-   and `nand` no longer panic
+   and `nand` no longer panic. Bad input no longer panics or loops: unterminated strings
+   and comments, and tokens the grammar does not know, make `parse` return `None` with
+   the reason in `errors` (cleared at each parse), and semicolon insertion no longer
+   repeats in front of a token that still does not fit
  - 0.1.6 changes to the precedences noted in STACK issue #1882
  - 0.1.5 some special assignment operator behaviour.
  - 0.1.4 plenty of extra operators and work on operator precedence, also

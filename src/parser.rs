@@ -661,6 +661,7 @@ impl StackMaximaParser {
 
 	/// Parses a given bit of source.
 	pub fn parse(&mut self, source: String) -> Option<MPNode> {
+		self.errors.clear();
 		self.lexer.set_source(source);
 
 		// Some holders of state.
@@ -690,6 +691,9 @@ impl StackMaximaParser {
         //  - If the next token finds an action all is fine
         //    and we clean these.
         //  - If not then we revert and consider that token as an ID.
+        // Where a token was last inserted: inserting again in front of the same token
+        // would loop for ever (e.g. `;` before a lone `else`).
+        let mut last_insert_at: Option<usize> = None;
         let mut kreverttoken: Option<StackMaximaToken> = None;
         let mut krevertstack: Vec<ParserStackItem> = Vec::new();
         let mut krevertreset: i32 = 0;
@@ -818,7 +822,10 @@ impl StackMaximaParser {
 							panic!("No whitspace should appear here.");
 						},
 						StackMaximaParserTokenType::ERROR(e) => {
-							panic!("A lexer error: {e}");
+							// An unterminated string or comment: a parse failure, not a panic.
+							let t = token.clone().unwrap();
+							self.errors.push(format!("{e} at line {}, column {}", t.startline, t.startcolumn));
+							return None;
 						}
 					}
 				}
@@ -854,8 +861,10 @@ impl StackMaximaParser {
 			}
 
 			// If no action we are in a bad state. We could try if an insertion would work.
+			let here = token.as_ref().map(|t| t.startbyte);
 			if action == TableAction::None {
-				for attempt in &self.inserts_to_attempt {
+				let may_insert = here.is_some() && last_insert_at != here;
+				for attempt in self.inserts_to_attempt.iter().filter(|_| may_insert) {
 					// Basically three types of things can be attempted. Symbols like '*', the end-token and list-separator.
 					if let StackMaximaParserTokenType::SYMBOL(a) = &attempt.value {
 						let maybe_action: TableAction = parsertables.get_action(current_state, a.clone());
@@ -882,6 +891,7 @@ impl StackMaximaParser {
 							}
 							token = Some(itoken);
 							action = maybe_action;
+							last_insert_at = here;
 							break;
 						}
 					} else if let StackMaximaParserTokenType::ENDTOKEN(_a) = &attempt.value {
@@ -901,6 +911,7 @@ impl StackMaximaParser {
 							itoken.endbyte = otoken.startbyte;
 							token = Some(itoken);
 							action = maybe_action;
+							last_insert_at = here;
 							break;
 						}
 					} else if let StackMaximaParserTokenType::LISTSEP(_a) = &attempt.value {
@@ -920,14 +931,21 @@ impl StackMaximaParser {
 							itoken.endbyte = otoken.startbyte;
 							token = Some(itoken);
 							action = maybe_action;
+							last_insert_at = here;
 							break;
 						}
 					}
 				}
 				// Maybe KEYWORD -> ID?
 				if action == TableAction::None && kreverttoken != None {
-					self.lexer.return_token(token.unwrap());
 					let mut ntoken = kreverttoken.unwrap();
+					// Give the current token back, unless it is the keyword itself (it is
+					// read again as the ID below) or the input has ended.
+					if let Some(t) = token {
+						if t.startbyte != ntoken.startbyte || t.endbyte != ntoken.endbyte {
+							self.lexer.return_token(t);
+						}
+					}
 					if let StackMaximaParserTokenType::KEYWORD(ref v,_) = ntoken.value {
 						ntoken.value = StackMaximaParserTokenType::ID(v.clone());
 					}
