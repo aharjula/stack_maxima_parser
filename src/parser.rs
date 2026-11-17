@@ -1250,7 +1250,7 @@ impl StackMaximaParser {
 						let _ = term0t;
 						ParserStackItem::List(Vec::new())
 					},
-					62 | 67 | 103..=104 => {
+					62 | 67 | 96 | 103..=104 => {
 						let _ = stack.pop();
 						let term1n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();
@@ -1329,7 +1329,7 @@ impl StackMaximaParser {
 							panic!("Unexpected token type.")}
 						ParserStackItem::List(term4mv)
 					},
-					81..=84 | 95..=101 | 105..=107 | 112 | 125..=128 => {
+					81..=84 | 95 | 97..=101 | 105..=107 | 112 | 125..=128 => {
 						let _ = stack.pop();
 						let term2n = if let ParserStackItem::Node(a) = stack.pop().unwrap() {a} else {panic!("Unexpected item in stack.");};
 						let _ = stack.pop();

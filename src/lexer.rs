@@ -1082,7 +1082,7 @@ impl StackMaximaLexer {
                     }
                 }
             },
-            "nounnot" | "%not" | "%and" | "%or" | "and" | "or" | "nouneq" | "nounadd" | "nounand" | "nounor" | "nounsub" | "nounpow" | "noundiv" | "nand" | "nor" | "implies" | "xor" | "xnor" | "UNARY_RECIP" | "unary_recip" | "blankmult" => {
+            "nounnot" | "%not" | "%and" | "%or" | "and" | "or" | "nouneq" | "nounadd" | "nounand" | "nounor" | "nounsub" | "nounmul" | "nounpow" | "noundiv" | "nand" | "nor" | "implies" | "xor" | "xnor" | "UNARY_RECIP" | "unary_recip" | "blankmult" => {
                 // Various ops.
                 token.value = StackMaximaParserTokenType::KEYWORD(converted, value);
                 Some(token)

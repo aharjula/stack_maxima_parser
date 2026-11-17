@@ -77,9 +77,9 @@ fn star_insertion_test() {
 ----
 **** | Root
 **** | Statement
-**** | Op: * [spaces]
+**** | Op: * [stars]
+***  | Op: * [spaces]
 *    | Int: 1
-  ** | Op: * [stars]
   *  | Int: 2
    * | ID: x
 ";
@@ -247,10 +247,10 @@ fn precedence0() {
 ******* | Root
 ******* | Statement
 ******* | Op: *
+*****   | Op: *
+***     | Op: *
 *       | Int: 1
-  ***** | Op: *
   *     | Int: 2
-    *** | Op: *
     *   | Int: 3
       * | Int: 4
 ";
@@ -299,10 +299,10 @@ fn precedence2() {
 ******** | Statement
 ******** | Op: +
 *        | ID: x
-  ****** | Op: *
+  ****** | Op: /
+  ****   | Op: *
   *      | Int: 2
-    **** | PrefixOp: -
-     *** | Op: /
+    **   | PrefixOp: -
      *   | ID: x
        * | Int: 2
 ";
@@ -399,10 +399,10 @@ fn precedence6() {
 ************************* | Root
 ************************* | Statement
 ************************* | Op: nounadd
+***************           | Op: +
+***********               | Op: nounadd
 *                         | Int: 1
-          *************** | Op: +
           *               | Int: 2
-              *********** | Op: nounadd
               *           | Int: 3
                         * | Int: 4
 ";
@@ -863,10 +863,10 @@ fn log_and_rel() {
 *****************************  | Statement
 *****************************  | List: 2 items
  *******************           | Op: and
+ ***********                   | Op: and
  ***                           | Op: =
  *                             | Int: 1
    *                           | ID: x
-         ***********           | Op: and
          ***                   | Op: =
          *                     | ID: x
            *                   | Int: 1

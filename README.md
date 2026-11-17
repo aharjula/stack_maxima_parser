@@ -16,8 +16,12 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
- - 0.1.7 arithmetic binds tighter than `and`/`or` (`a+2 and b` is `(a+2) and b`), and
-   the infix `xor`, `xnor`, `nor` and `nand` no longer panic
+ - 0.1.7 operator grouping now follows Maxima's binding powers (with STACK's operator
+   declarations) everywhere, checked against Maxima itself: e.g. `a:b:0` is `a:(b:0)`,
+   `a*b/c` is `(a*b)/c`, `-a*b` is `(-a)*b`, `a+2 and b` is `(a+2) and b`, and STACK's
+   logic operators have their own levels. Same-level operators group to the left.
+   `nounsub` is a prefix operator, `nounmul` is lexed, and the infix `xor`, `xnor`, `nor`
+   and `nand` no longer panic
  - 0.1.6 changes to the precedences noted in STACK issue #1882
  - 0.1.5 some special assignment operator behaviour.
  - 0.1.4 plenty of extra operators and work on operator precedence, also
