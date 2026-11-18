@@ -1416,7 +1416,7 @@ impl StackMaximaParser {
 
 				// Else figure out where to go now.
 				if let ParserStackItem::State(state) = stack[stack.len()-2] {
-					let next: usize = *parsertables.goto.get(&state).unwrap().get(&nt_id).unwrap();
+					let next: usize = *parsertables.goto.get(&(state as u32)).unwrap().get(&(nt_id as u32)).unwrap();
 					stack.push(ParserStackItem::State(next));
 				} else {
 					panic!("Expected a state in the stack, got something else.");

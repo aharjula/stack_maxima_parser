@@ -16,6 +16,9 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.8 parses on 32-bit targets such as WebAssembly: the parser tables are keyed by
+   `u32`, because the hash of a `usize` key depends on the target's width, so tables built
+   on a 64-bit host were not found on a 32-bit one and nothing parsed
  - 0.1.7 operator grouping now follows Maxima's binding powers (with STACK's operator
    declarations) everywhere, checked against Maxima itself: e.g. `a:b:0` is `a:(b:0)`,
    `a*b/c` is `(a*b)/c`, `-a*b` is `(-a)*b`, `a+2 and b` is `(a+2) and b`, and STACK's
