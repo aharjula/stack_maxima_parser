@@ -598,6 +598,21 @@ enum ParserStackItem {
 }
 
 /// The actual parser, object.
+/// A token as written, for error messages.
+fn describe_token(value: &StackMaximaParserTokenType) -> String {
+	match value {
+		StackMaximaParserTokenType::KEYWORD(_, orig) => format!("`{orig}`"),
+		StackMaximaParserTokenType::ID(v) | StackMaximaParserTokenType::LISPID(v) => format!("`{v}`"),
+		StackMaximaParserTokenType::INT(_, orig) | StackMaximaParserTokenType::FLOAT(_, orig) => format!("`{orig}`"),
+		StackMaximaParserTokenType::BOOL(_, orig) => format!("`{orig}`"),
+		StackMaximaParserTokenType::STRING(_) => "a string".to_string(),
+		StackMaximaParserTokenType::SYMBOL(v) => format!("`{v}`"),
+		StackMaximaParserTokenType::LISTSEP(v) | StackMaximaParserTokenType::ENDTOKEN(v) => format!("`{v}`"),
+		StackMaximaParserTokenType::WS(_) | StackMaximaParserTokenType::COMMENT(_) => "a comment".to_string(),
+		StackMaximaParserTokenType::ERROR(e) => e.clone(),
+	}
+}
+
 pub struct StackMaximaParser {
 	/// Public access to the lexer so that its settings can be tuned.
 	pub lexer: StackMaximaLexer,
@@ -824,7 +839,7 @@ impl StackMaximaParser {
 						StackMaximaParserTokenType::ERROR(e) => {
 							// An unterminated string or comment: a parse failure, not a panic.
 							let t = token.clone().unwrap();
-							self.errors.push(format!("{e} at line {}, column {}", t.startline, t.startcolumn));
+							self.errors.push(format!("{e} at line {}, column {}", t.startline, t.startcolumn + 1));
 							return None;
 						}
 					}
@@ -967,7 +982,14 @@ impl StackMaximaParser {
 				}
 
 				if action == TableAction::None {
-					// TODO generate error message
+					// A syntax error: say what was found and where.
+					self.errors.push(match &token {
+						None => "the input ends too early".to_string(),
+						// Inserted tokens have no position of their own.
+						Some(t) if t.startline == usize::MAX => format!("unexpected {}", describe_token(&t.value)),
+						// Token columns count from 0; people count from 1.
+						Some(t) => format!("unexpected {} at line {}, column {}", describe_token(&t.value), t.startline, t.startcolumn + 1),
+					});
 					return None;
 				}
 			}

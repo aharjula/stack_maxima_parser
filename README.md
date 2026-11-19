@@ -16,6 +16,8 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.9 every parse failure says why in `errors`: an unexpected token with its line and
+   column, or that the input ends too early. Columns in messages count from 1
  - 0.1.8 parses on 32-bit targets such as WebAssembly: the parser tables are keyed by
    `u32`, because the hash of a `usize` key depends on the target's width, so tables built
    on a 64-bit host were not found on a 32-bit one and nothing parsed
