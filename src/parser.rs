@@ -987,7 +987,7 @@ impl StackMaximaParser {
 						None => "the input ends too early".to_string(),
 						// Inserted tokens have no position of their own.
 						Some(t) if t.startline == usize::MAX => format!("unexpected {}", describe_token(&t.value)),
-						// Token columns count from 0; people count from 1.
+						// Parser columns count from 0; people count from 1.
 						Some(t) => format!("unexpected {} at line {}, column {}", describe_token(&t.value), t.startline, t.startcolumn + 1),
 					});
 					return None;

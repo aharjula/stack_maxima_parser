@@ -17,7 +17,15 @@ Early days for this lib, expect new features as needs arise.
 Changelog:
  
  - 0.1.9 every parse failure says why in `errors`: an unexpected token with its line and
-   column, or that the input ends too early. Columns in messages count from 1
+   column, or that the input ends too early. Columns in messages count from 1. The lexer
+   reads numbers as Maxima does: `1.` is the integer 1, `a.e` is a dot product (not `a`
+   and a float `.e`), the exponent markers `b`, `d`, `f`, `s` and `l` work besides `e` (a
+   bigfloat is a FLOAT whose original text keeps the `b`), and an exponent without digits
+   (`1e`) is an error. A character the grammar does not know is an error token instead of
+   ending the input, which dropped the rest of the code: `\r` (Windows line endings),
+   non-breaking spaces and other Unicode spaces are whitespace, letters of any script make
+   names, and others (`\`, `&`, `×`, ...) are errors with a reason. Error tokens for
+   unterminated strings and comments now end where the input does
  - 0.1.8 parses on 32-bit targets such as WebAssembly: the parser tables are keyed by
    `u32`, because the hash of a `usize` key depends on the target's width, so tables built
    on a 64-bit host were not found on a 32-bit one and nothing parsed

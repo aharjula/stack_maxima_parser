@@ -529,6 +529,8 @@ impl StackMaximaLexer {
                             Some(c1) => {
                                 match c1.c {
                                     '*' => {
+                                        token.endcolumn = c1.column;
+                                        token.endbyte = c1.byte + c1.c.len_utf8();
                                         self.eat_comment(token)
                                     },
                                     _ => {
@@ -540,7 +542,7 @@ impl StackMaximaLexer {
                             }
                         }
                     },
-                    ' ' | '\t' | '\n' => {
+                    c if is_space(c) => {
                         self.eat_whitespace(token, c0)
                     },
                     '%' | '_' => {
@@ -651,7 +653,8 @@ impl StackMaximaLexer {
                         }
 
                     },
-                    c if (c.is_letter_lowercase() || c.is_letter_uppercase()) => {
+                    // Any letter, as in Maxima: `变量` is a name too.
+                    c if c.is_alphabetic() => {
                         self.eat_identifier(token, c0)
                     },
                     c if self.decimal_sep == c => {
@@ -670,8 +673,10 @@ impl StackMaximaLexer {
                         if self.decimal_sep == c0.c {
                             return self.eat_num(c0);
                         }
-                        // TODO: Unicode equivalents.
-                        None
+                        // A character the grammar does not know: an error, not the end of the
+                        // input (which would silently drop the rest of the code).
+                        token.value = StackMaximaParserTokenType::ERROR(format!("unexpected character `{}`", c0.c));
+                        Some(token)
                     }
                 }
             }
@@ -722,6 +727,8 @@ impl StackMaximaLexer {
                             break;
                         },
                         '\\' => {
+                            token.endcolumn = cn.column;
+                            token.endbyte = cn.byte + cn.c.len_utf8();
                             c = self.popc();
                             length += 1;
                             match c {
@@ -734,6 +741,8 @@ impl StackMaximaLexer {
                                         // In Maxima "strings" only the case of newline after a \ is special, all others are interpereted as if that \ was not there and as if the second char had no other role.
                                         '\n' => {
                                             length += 1;
+                                            token.endcolumn = cn.column;
+                                            token.endbyte = cn.byte + cn.c.len_utf8();
                                         },
                                         _ => {
                                             length += 1;
@@ -761,13 +770,20 @@ impl StackMaximaLexer {
         Some(token)
     }
 
+    /// The next char, without taking it.
+    fn peekc(&self, n: usize) -> Option<char> {
+        self.chars.get(n).map(|c| c.c)
+    }
+
+    /// A number, as Maxima reads them: digits, an optional decimal separator with optional
+    /// digits, and an optional exponent: a marker (`e`, `b`, `d`, `f`, `s` or `l`, in either
+    /// case), an optional sign and digits. `1.` is the integer 1, as in Maxima, and a
+    /// separator that starts something other than a number (`.e` in `a.e`) is a symbol.
+    /// Exponent markers other than `e` and `E` normalise to `e`; the original text keeps a
+    /// bigfloat's `b`. A
+    /// marker without digits after it is an error, as in Maxima.
     fn eat_num(&mut self, first: Char) -> Option<StackMaximaToken> {
-        let mut value: String = String::new();
-        value.push(first.c);
-
-        let mut pre_decimal = first.c != self.decimal_sep;
-        let mut in_exponent = false;
-
+        let sep = self.decimal_sep;
         let mut token: StackMaximaToken = StackMaximaToken {
             startline: first.line,
             startcolumn: first.column,
@@ -778,142 +794,72 @@ impl StackMaximaLexer {
             length: 1,
             value: StackMaximaParserTokenType::ERROR("eat_num uninitialised".to_string())
         };
+        let mut value: String = first.c.to_string();
+        let digit = |c: Option<char>| c.is_some_and(|c| c.is_ascii_digit());
 
-
-        let mut c = self.popc();
-        // The second char is special, in the sense that things may end fast.
-        match c {
-            None => {
-                if value == "." {    
-                    token.value = StackMaximaParserTokenType::SYMBOL(value);
-                    return Some(token);
-                } else {
-                    token.value = StackMaximaParserTokenType::INT(value.clone(), value);
-                    return Some(token);
-                }
-            },
-            Some(c1) => {
-                match c1.c {
-                    '0'..='9' => {
-                        value.push(c1.c);
-                        token.endcolumn = c1.column;
-                        token.endbyte = c1.byte + c1.c.len_utf8();
-                    },
-                    'e' | 'E' => {
-                        value.push(c1.c);
-                        in_exponent = true;
-                        token.endcolumn = c1.column;
-                        token.endbyte = c1.byte + c1.c.len_utf8();
-                    },
-                    c if c == self.decimal_sep => {
-                        if pre_decimal {
-                            value.push(c);
-                            token.endcolumn = c1.column;
-                        	token.endbyte = c1.byte + c1.c.len_utf8();
-                            pre_decimal = false;
-                        } else {
-                            // Cannot have a second decimal separator at the start.
-                            self.pushc(c1);
-                            // Therefore must be a symbol, but even then things get interesting.
-                            // If decimal_sep == '.' then all is fine but if not what to do.
-                            // Leave the correcting to upper levels.
-                            token.value = StackMaximaParserTokenType::SYMBOL(value);
-                            return Some(token);
-                        }
-                    },
-                    // TODO: digit grouping
-                    _ => {
-                        self.pushc(c1);
-                        if value == "." || first.c == self.decimal_sep {
-                            token.value = StackMaximaParserTokenType::SYMBOL(value);
-                            return Some(token);
-                        } else {
-                            token.value = StackMaximaParserTokenType::INT(value.clone(), value);
-                            return Some(token);
-                        }
+        if first.c == sep && !digit(self.peekc(0)) {
+            // Only a separator: the dot operator, for instance.
+            token.value = StackMaximaParserTokenType::SYMBOL(value);
+            return Some(token);
+        }
+        let mut point = first.c == sep;
+        let mut fraction = point;
+        let mut exponent = false;
+        // Takes the next char into the token.
+        let take = |lexer: &mut StackMaximaLexer, token: &mut StackMaximaToken, value: &mut String| {
+            let c = lexer.popc().expect("peeked");
+            value.push(c.c);
+            token.endline = c.line;
+            token.endcolumn = c.column;
+            token.endbyte = c.byte + c.c.len_utf8();
+        };
+        while digit(self.peekc(0)) {
+            take(self, &mut token, &mut value);
+        }
+        if !point && self.peekc(0) == Some(sep) {
+            take(self, &mut token, &mut value);
+            point = true;
+            while digit(self.peekc(0)) {
+                take(self, &mut token, &mut value);
+                fraction = true;
+            }
+        }
+        if let Some(m) = self.peekc(0) {
+            if "eEbBdDfFsSlL".contains(m) {
+                let signed = matches!(self.peekc(1), Some('+') | Some('-'));
+                if digit(self.peekc(if signed { 2 } else { 1 })) {
+                    take(self, &mut token, &mut value);
+                    if signed {
+                        take(self, &mut token, &mut value);
                     }
+                    while digit(self.peekc(0)) {
+                        take(self, &mut token, &mut value);
+                    }
+                    exponent = true;
+                } else if m == 'e' || m == 'E' {
+                    // `1e`, `1e+`, `2ex`: Maxima rejects these. (Another marker letter
+                    // starts a name, which the parser rejects after a number anyway.)
+                    take(self, &mut token, &mut value);
+                    token.length = value.chars().count() as i16;
+                    token.value = StackMaximaParserTokenType::ERROR(format!("the exponent of `{value}` has no digits"));
+                    return Some(token);
                 }
             }
         }
-
-        loop {
-            c = self.popc();
-            match c {
-                None => {
-                    break;
-                },
-                Some(cn) => {
-                    match cn.c {
-                        '0'..='9' => {
-                            value.push(cn.c);
-                            token.endcolumn = cn.column;
-                        	token.endbyte = cn.byte + cn.c.len_utf8();
-                        },
-                        'e' | 'E' => {
-                            if in_exponent {
-                                // Second "e", break.
-                                self.pushc(cn);
-                                token.length = value.chars().count() as i16;
-                                token.value = StackMaximaParserTokenType::FLOAT(value.replace(self.decimal_sep, "."), value);
-                                return Some(token);
-                            } else {
-                                value.push(cn.c);
-                                token.endcolumn = cn.column;
-                        		token.endbyte = cn.byte + cn.c.len_utf8();
-                                in_exponent = true;
-                            }
-                        },
-                        c if c == self.decimal_sep => {
-                            if !pre_decimal {
-                                // Second decimal_sep, break.
-                                self.pushc(cn);
-                                token.length = value.chars().count() as i16;
-                                token.value = StackMaximaParserTokenType::FLOAT(value.replace(self.decimal_sep, "."), value);
-                                return Some(token);
-                            } else {
-                                value.push(c);
-                                token.endcolumn = cn.column;
-                        		token.endbyte = cn.byte + cn.c.len_utf8();
-                                pre_decimal = false;
-                            }
-                        },
-                        '+' | '-' => {
-                            if in_exponent && (value.ends_with('e') || value.ends_with('E')) {
-                                value.push(cn.c);
-                                token.endcolumn = cn.column;
-                        		token.endbyte = cn.byte + cn.c.len_utf8();
-                            } else {
-                                // Not the right place for those.
-                                self.pushc(cn);
-                                if !pre_decimal || in_exponent {
-                                    token.length = value.chars().count() as i16;
-                                    token.value = StackMaximaParserTokenType::FLOAT(value.replace(self.decimal_sep, "."), value);
-                                    return Some(token);
-                                } else {
-                                    token.length = value.chars().count() as i16;
-                                    token.value = StackMaximaParserTokenType::INT(value.clone(), value);
-                                    return Some(token);
-                                }
-                            }
-                        },
-                        // TODO groupings.
-                        _ => {
-                            self.pushc(cn);
-                            break;
-                        }
-                    }
-                }
+        token.length = value.chars().count() as i16;
+        if fraction || exponent {
+            let mut normal: String = value.replace(sep, ".");
+            if exponent {
+                normal = normal.chars().map(|c| if "bBdDfFsSlL".contains(c) { 'e' } else { c }).collect();
             }
-        }
-        if !pre_decimal || in_exponent {
-            token.length = value.chars().count() as i16;
-            token.value = StackMaximaParserTokenType::FLOAT(value.replace(self.decimal_sep, "."), value);
-            Some(token)
+            token.value = StackMaximaParserTokenType::FLOAT(normal, value);
+        } else if point {
+            // `1.` is an integer in Maxima.
+            token.value = StackMaximaParserTokenType::INT(value[..value.len() - sep.len_utf8()].to_string(), value);
         } else {
-            token.length = value.chars().count() as i16;
             token.value = StackMaximaParserTokenType::INT(value.clone(), value);
-            Some(token)
         }
+        Some(token)
     }
 
     fn eat_whitespace(&mut self, mut token: StackMaximaToken, first: Char) -> Option<StackMaximaToken> {
@@ -928,7 +874,7 @@ impl StackMaximaLexer {
                 },
                 Some(cn) => {
                     match cn.c {
-                        ' ' | '\t' | '\n' => {
+                        c if is_space(c) => {
                             token.length += 1;
                             value.push(cn.c);
                             token.endcolumn = cn.column;
@@ -961,6 +907,8 @@ impl StackMaximaLexer {
                     match c1.c {
                         '*' => {
                             token.length += 1;
+                            token.endcolumn = c1.column;
+                            token.endbyte = c1.byte + c1.c.len_utf8();
                             c = self.popc();
                             match c {
                                 None => {
@@ -1015,7 +963,7 @@ impl StackMaximaLexer {
                         	token.endbyte = cn.byte + cn.c.len_utf8();
                             value.push(cn.c);
                         },
-                        c if (c.is_letter_lowercase() || c.is_letter_uppercase()) => {
+                        c if c.is_alphabetic() => {
                             token.endcolumn = cn.column;
                         	token.endbyte = cn.byte + cn.c.len_utf8();
                             token.length += 1;
@@ -1099,4 +1047,10 @@ impl StackMaximaLexer {
             }
         }
     }
+}
+
+/// Whitespace as Maxima reads it: what Unicode calls whitespace (including `\r`, so
+/// Windows line endings work, and non-breaking spaces) except the vertical tab.
+fn is_space(c: char) -> bool {
+    c.is_whitespace() && c != '\u{0b}'
 }
