@@ -142,13 +142,17 @@ impl StackMaximaToken {
                 t1.value = StackMaximaParserTokenType::SYMBOL(op1.to_string());
                 t2.value = StackMaximaParserTokenType::SYMBOL(op2.to_string());
 
+                // Columns are inclusive at the end and bytes exclusive.
+                let (n1, n2) = (op1.chars().count(), op2.chars().count());
                 t1.endline = t1.startline;
-                t1.endcolumn = t1.startcolumn + op1.len();
+                t1.endcolumn = t1.startcolumn + n1 - 1;
                 t1.endbyte = t1.startbyte + op1.len();
+                t1.length = n1 as i16;
 
                 t2.startline = t2.endline;
-                t2.startbyte = t2.endbyte - op2.len() + 1;
-                t2.startcolumn = t2.endcolumn - op2.len() + 1;
+                t2.startbyte = t2.endbyte - op2.len();
+                t2.startcolumn = t2.endcolumn + 1 - n2;
+                t2.length = n2 as i16;
             }
         }
 

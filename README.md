@@ -16,6 +16,9 @@ Early days for this lib, expect new features as needs arise.
 
 Changelog:
  
+ - 0.1.10 `StackMaximaToken::split` (an operator directly followed by a prefix operator,
+   as in `a^-b`) gives both parts their own positions: the first part ended a column too
+   late, the second started a byte too late, and neither had its own length
  - 0.1.9 every parse failure says why in `errors`: an unexpected token with its line and
    column, or that the input ends too early. Columns in messages count from 1. The lexer
    reads numbers as Maxima does: `1.` is the integer 1, `a.e` is a dot product (not `a`
